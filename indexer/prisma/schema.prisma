@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Transaction {
+  id                String    @id @default(cuid())
+  signature         String    @unique
+  slot              BigInt
+  transactionIndex  BigInt    @default(0) // Position within the block
+  blockTime         DateTime?
+  success           Boolean
+  fee               BigInt?
+  computeUnitsUsed  BigInt?
+  accounts          String[]  // All account pubkeys involved
+  instructions      Json[]    // Array of instruction data
+  logs              String[]  // Log messages, recorded for every transaction
+  error             String?   // Decoded failure reason, null when successful
+  errorCode         String?   // Stable machine-readable failure code
+  memos             Memo[]
+  accountTransactions AccountTransaction[]
+  accountBalances   AccountBalance[]
+  createdAt         DateTime  @default(now())
+
+  @@index([slot])
+  @@index([slot, transactionIndex])
+  @@index([success])
+  @@index([blockTime])
+  @@index([errorCode])
+}
+
+model Memo {
+  id            String      @id @default(cuid())
+  content       String
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@index([content])
+  @@index([transactionId])
+}
+
+model Account {
+  id        String   @id @default(cuid())
+  address   String   @unique
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @updatedAt
+  accountTransactions AccountTransaction[]
+
+  @@index([address])
+}
+
+model AccountTransaction {
+  id            String      @id @default(cuid())
+  accountId     String
+  transactionId String
+  account       Account     @relation(fields: [accountId], references: [id])
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+
+  @@unique([accountId, transactionId])
+  @@index([accountId])
+  @@index([transactionId])
+}
+
+model AccountBalance {
+  id                String      @id @default(cuid())
+  accountAddress    String
+  transactionId     String
+  transaction       Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  accountIndex      Int
+  preBalance        BigInt
+  postBalance       BigInt
+  balanceChange     BigInt
+  slot              BigInt
+  transactionIndex  BigInt      @default(0) // Denormalised, mirrors Transaction.transactionIndex
+  blockTime         DateTime?
+
+  @@index([accountAddress])
+  @@index([accountAddress, slot, transactionIndex])
+  @@index([transactionId])
+  @@unique([transactionId, accountIndex])
+}
