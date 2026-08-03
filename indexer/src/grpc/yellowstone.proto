@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package geyser;
+
+service GeyserGrpcService {
+  rpc SubscribeGeyser (SubscribeRequest) returns (stream SubscribeUpdate);
+}
+
+message SubscribeRequest {
+  bool subscribe_all_transactions = 1;
+  bool subscribe_slots = 2;
+}
+
+message SubscribeUpdate {
+  oneof update_oneof {
+    SlotUpdate slot_update = 1;
+    TransactionUpdate transaction_update = 2;
+  }
+}
+
+message SlotUpdate {
+  uint64 slot = 1;
+  uint64 parent = 2;
+}
+
+message TransactionUpdate {
+  uint64 slot = 1;
+  string signature = 2;
+  bool success = 3;
+  uint64 fee = 4;
+  repeated string signers = 5;
+  string raw = 6; // raw JSON string
+}
