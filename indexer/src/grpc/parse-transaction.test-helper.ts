@@ -1,11 +1,10 @@
 /**
- * TEST-ONLY MIRROR of the transaction-parsing logic in `src/indexer.ts`
- * (the `stream.on("data", ...)` handler, roughly lines 83-166).
+ * TEST-ONLY MIRROR of the transaction-parsing logic in `handleUpdate()`
+ * in `src/indexer.ts`.
  *
- * This file is NOT imported by production code (`indexer.ts`, `main.ts`).
- * It exists solely so the parsing logic can be exercised with unit tests
- * without refactoring `indexer.ts`, per explicit instruction to avoid
- * touching the production code path.
+ * `handleUpdate` is exported, but importing it pulls in `db/query` and the
+ * Prisma client, so these tests mirror the parsing steps instead of calling
+ * it directly. That keeps the suite runnable without a database.
  *
  * IMPORTANT: if the parsing logic in `indexer.ts` changes, this mirror
  * must be updated to match, or these tests will validate stale behavior.
