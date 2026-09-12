@@ -65,7 +65,7 @@ export async function GET(
   }
 
   const [balances, totalBalances, latest, stats] = await Promise.all([
-    (prisma.accountBalance as any).findMany({
+    prisma.accountBalance.findMany({
       where,
       orderBy: { slot: "desc" },
       skip,
@@ -80,15 +80,15 @@ export async function GET(
         },
       },
     }),
-    (prisma.accountBalance as any).count({
+    prisma.accountBalance.count({
       where,
     }),
-    (prisma.accountBalance as any).findFirst({
+    prisma.accountBalance.findFirst({
       where: { accountAddress: address },
       orderBy: { slot: "desc" },
       select: { postBalance: true },
     }),
-    (prisma.accountBalance as any).aggregate({
+    prisma.accountBalance.aggregate({
       where,
       _sum: {
         balanceChange: true,
