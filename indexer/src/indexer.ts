@@ -94,7 +94,14 @@ function closeClient(client: Client) {
 
 function destroyStream(stream: any) {
   try {
-    stream.removeAllListeners();
+    stream.removeAllListeners("data");
+    stream.removeAllListeners("end");
+    stream.removeAllListeners("close");
+    stream.removeAllListeners("error");
+    // A torn-down gRPC stream can still emit a late "error". With no listener
+    // Node escalates that to an uncaught exception, which would kill the
+    // process mid-reconnect, so swallow it deliberately.
+    stream.on("error", () => {});
     stream.destroy();
   } catch {
     // Already torn down.
