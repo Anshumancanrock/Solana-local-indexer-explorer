@@ -36,32 +36,44 @@ function TransactionsList() {
   const page = parseInt(searchParams.get("page") || "1", 10);
 
   const [data, setData] = useState<TransactionListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  // Bumped by the refresh button to re-run the fetch for the page already shown.
+  const [reloadToken, setReloadToken] = useState(0);
+  // The page whose fetch has come back, successfully or not. Deriving `loading`
+  // from it avoids setting loading state synchronously inside the effect.
+  const [settledPage, setSettledPage] = useState<number | null>(null);
 
-  const fetchData = useCallback(
-    (isRefresh = false) => {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      fetch(`/api/transactions?page=${page}&limit=20`)
-        .then((res) => res.json())
-        .then((d) => {
-          setData(d);
-          setLastUpdated(new Date());
-        })
-        .catch(console.error)
-        .finally(() => {
-          setLoading(false);
-          setRefreshing(false);
-        });
-    },
-    [page]
-  );
+  const loading = settledPage !== page;
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const controller = new AbortController();
+
+    fetch(`/api/transactions?page=${page}&limit=20`, {
+      signal: controller.signal,
+    })
+      .then((res) => res.json())
+      .then((d) => {
+        setData(d);
+        setLastUpdated(new Date());
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error(err);
+      })
+      .finally(() => {
+        if (controller.signal.aborted) return;
+        setSettledPage(page);
+        setRefreshing(false);
+      });
+
+    return () => controller.abort();
+  }, [page, reloadToken]);
+
+  const refresh = useCallback(() => {
+    setRefreshing(true);
+    setReloadToken((token) => token + 1);
+  }, []);
 
   return (
     <PageShell className="space-y-6">
@@ -77,7 +89,7 @@ function TransactionsList() {
               </span>
             )}
             <Button
-              onClick={() => fetchData(true)}
+              onClick={refresh}
               disabled={refreshing}
               variant="outline"
               size="sm"
@@ -100,7 +112,7 @@ function TransactionsList() {
             <p className="text-sm mt-1 mb-4 opacity-80">
               There was an error communicating with the API.
             </p>
-            <Button onClick={() => fetchData(true)} variant="outline" size="sm" className="rounded-xl">
+            <Button onClick={refresh} variant="outline" size="sm" className="rounded-xl">
               Try again
             </Button>
           </div>

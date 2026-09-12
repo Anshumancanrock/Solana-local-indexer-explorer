@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CopyButton } from "@/components/copy-button";
@@ -48,19 +48,29 @@ function AccountDetail() {
 
   const [fieldValue, setFieldValue] = useState(field);
   const [unitValue, setUnitValue] = useState(unit);
+  const [syncedFilters, setSyncedFilters] = useState({ field, unit });
+
+  // The selects are local form state, but a submitted filter navigates and
+  // changes the URL without remounting this component. Resyncing during render
+  // is React's documented way to reset state when the value it mirrors changes.
+  if (syncedFilters.field !== field || syncedFilters.unit !== unit) {
+    setSyncedFilters({ field, unit });
+    setFieldValue(field);
+    setUnitValue(unit);
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Identifies the query currently in the URL. Once the matching response has
+  // settled, the page is no longer loading.
+  const [settledQuery, setSettledQuery] = useState<string | null>(null);
+
+  const query = [address, page, field, amount, minAmount, maxAmount, unit].join("|");
+  const loading = settledQuery !== query;
 
   useEffect(() => {
-    setFieldValue(field);
-    setUnitValue(unit);
-  }, [field, unit]);
-
-  const fetchData = useCallback(() => {
-    setLoading(true);
+    const controller = new AbortController();
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "20");
@@ -73,19 +83,28 @@ function AccountDetail() {
       if (maxAmount.trim()) params.set("maxAmount", maxAmount.trim());
     }
 
-    fetch(`/api/accounts/${address}?${params.toString()}`)
+    fetch(`/api/accounts/${address}?${params.toString()}`, {
+      signal: controller.signal,
+    })
       .then((res) => {
         if (!res.ok) throw new Error("Account not found");
         return res.json();
       })
-      .then(setData)
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [address, page, field, amount, minAmount, maxAmount, unit]);
+      .then((d) => {
+        setData(d);
+        setError(null);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(err.message);
+      })
+      .finally(() => {
+        if (controller.signal.aborted) return;
+        setSettledQuery(query);
+      });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    return () => controller.abort();
+  }, [address, page, field, amount, minAmount, maxAmount, unit, query]);
 
   if (loading)
     return (

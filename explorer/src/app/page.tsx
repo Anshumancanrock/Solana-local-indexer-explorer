@@ -38,22 +38,30 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStats = async () => {
-    try {
-      const res = await fetch("/api/stats");
-      const data = await res.json();
-      setStats(data);
-    } catch (err) {
-      console.error("Failed to fetch stats:", err);
-    } finally {
-      if (loading) setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchStats();
+    const controller = new AbortController();
+
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/stats", { signal: controller.signal });
+        const data = await res.json();
+        if (controller.signal.aborted) return;
+        setStats(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        console.error("Failed to fetch stats:", err);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    void fetchStats();
     const interval = setInterval(fetchStats, 5000);
-    return () => clearInterval(interval);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, []);
 
   return (
