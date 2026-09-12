@@ -14,8 +14,6 @@ What you get:
 - REST endpoints for querying the indexed data
 - Everything in Docker, so no local Rust toolchain, Solana CLI, or Postgres install is required
 
-[Watch the demo video](https://www.loom.com/share/67ac946f6bf04277842b41423a0b5730) for a walkthrough of the setup and the explorer features.
-
 If this is your first time setting it up, [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) covers installing Docker, verifying each step, and troubleshooting.
 
 ## Screenshots

@@ -13,4 +13,6 @@ COPY . .
 
 RUN pnpm prisma generate
 
-CMD ["pnpm", "run", "dev"]
+# Run node directly so it is PID 1 and receives SIGTERM. Going through pnpm
+# leaves the shutdown handlers in src/main.ts unreachable.
+CMD ["node", "-r", "tsx/cjs", "src/main.ts"]
