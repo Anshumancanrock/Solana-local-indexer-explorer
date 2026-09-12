@@ -1,5 +1,7 @@
 # Solana Local Explorer
 
+[![CI](https://github.com/Anshumancanrock/Solana-local-indexer-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/Anshumancanrock/Solana-local-indexer-explorer/actions/workflows/ci.yml)
+
 A self-hosted block explorer for a local Solana validator. It runs a test validator with the Yellowstone gRPC Geyser plugin, streams transactions into PostgreSQL, and serves them through a Next.js UI and a small REST API.
 
 Public explorers only see public clusters, so transactions on a local or private validator are invisible to them. Writing your own indexer means handling the Geyser gRPC stream, a database schema, and a frontend. This repo packages all of that behind a single `docker compose` command.
